@@ -1,0 +1,2258 @@
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مدرسة دار العلوم الخاصة | نظام إدارة النقل المدرسي</title>
+    
+    <!-- خط Cairo -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- أيقونات Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- مكتبة تصدير ملفات Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <!-- حزم Firebase الرسمية (Compat v10) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+    <style>
+        :root {
+            --primary: #1e3a8a;
+            --primary-dark: #0f172a;
+            --primary-light: #3b82f6;
+            --accent: #0d9488;
+            --gold: #d97706;
+            --bg: #f8fafc;
+            --surface: #ffffff;
+            --border: #e2e8f0;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+
+            /* شارات التصاريح */
+            --status-safe: #10b981;
+            --status-warn-60: #eab308;
+            --status-warn-30: #f97316;
+            --status-warn-15: #ef4444;
+            --status-expired: #991b1b;
+
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1);
+            --radius: 12px;
+            --transition: all 0.25s ease-in-out;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Cairo', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            direction: rtl;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        /* شاشة تسجيل الدخول */
+        #login-screen {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #0d9488 100%);
+            padding: 20px;
+        }
+
+        .login-card {
+            background: var(--surface);
+            border-radius: 20px;
+            padding: 40px 30px;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+            text-align: center;
+        }
+
+        .login-card .school-title {
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--primary);
+            margin-bottom: 5px;
+        }
+
+        .login-card .system-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--gold);
+            margin-bottom: 30px;
+            border-bottom: 2px solid #f1f5f9;
+            padding-bottom: 12px;
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+            text-align: right;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 6px;
+        }
+
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-wrapper i {
+            position: absolute;
+            right: 15px;
+            color: var(--text-muted);
+            font-size: 15px;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 42px 12px 15px;
+            border: 1.5px solid var(--border);
+            border-radius: 10px;
+            font-size: 14px;
+            outline: none;
+            transition: var(--transition);
+            background: #f8fafc;
+        }
+
+        .form-control:focus {
+            border-color: var(--primary-light);
+            background: #fff;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 11px 18px;
+            font-size: 14px;
+            font-weight: 700;
+            border-radius: 10px;
+            border: none;
+            cursor: pointer;
+            transition: var(--transition);
+            text-decoration: none;
+        }
+
+        .btn-primary { background-color: var(--primary); color: #fff; }
+        .btn-primary:hover { background-color: #1d4ed8; }
+        .btn-success { background: var(--status-safe); color: #fff; }
+        .btn-success:hover { background: #059669; }
+        .btn-danger { background: var(--status-warn-15); color: #fff; }
+        .btn-danger:hover { background: #dc2626; }
+        .btn-warning { background: var(--gold); color: #fff; }
+        .btn-warning:hover { background: #b45309; }
+        .btn-secondary { background: #64748b; color: #fff; }
+        .btn-secondary:hover { background: #475569; }
+
+        /* الشاشة الرئيسية */
+        #app-container {
+            display: none;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 260px;
+            height: 100vh;
+            background: var(--primary-dark);
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            z-index: 100;
+            transition: var(--transition);
+        }
+
+        .sidebar-brand {
+            padding: 24px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            text-align: center;
+        }
+
+        .sidebar-brand h2 {
+            font-size: 18px;
+            font-weight: 800;
+            color: #fff;
+        }
+
+        .sidebar-brand span {
+            font-size: 12px;
+            color: #94a3b8;
+            display: block;
+            margin-top: 4px;
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            padding: 15px 10px;
+            flex-grow: 1;
+            overflow-y: auto;
+        }
+
+        .sidebar-menu li {
+            margin-bottom: 4px;
+        }
+
+        .sidebar-menu a {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            color: #cbd5e1;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+            border-radius: 8px;
+            transition: var(--transition);
+        }
+
+        .sidebar-menu a:hover, .sidebar-menu a.active {
+            background: rgba(255,255,255,0.12);
+            color: #fff;
+            border-right: 4px solid var(--accent);
+        }
+
+        .sidebar-menu i {
+            font-size: 16px;
+            width: 20px;
+            text-align: center;
+        }
+
+        .sidebar-footer {
+            padding: 15px 20px;
+            border-top: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .main-wrapper {
+            margin-right: 260px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            transition: var(--transition);
+        }
+
+        .top-navbar {
+            background: var(--surface);
+            padding: 15px 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 90;
+        }
+
+        .nav-controls {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .toggle-btn {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 22px;
+            color: var(--primary);
+            cursor: pointer;
+        }
+
+        .global-search {
+            position: relative;
+            width: 360px;
+        }
+
+        .global-search input {
+            width: 100%;
+            padding: 10px 40px 10px 15px;
+            border: 1.5px solid var(--border);
+            border-radius: 20px;
+            font-size: 13px;
+            outline: none;
+            background: #f8fafc;
+        }
+
+        .global-search i {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+        }
+
+        .page-content {
+            padding: 30px;
+            flex-grow: 1;
+        }
+
+        .section-view {
+            display: none;
+        }
+
+        .section-view.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .page-header h1 {
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--primary);
+        }
+
+        .page-header p {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        /* الإحصائيات */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            gap: 16px;
+            margin-bottom: 25px;
+        }
+
+        .stat-card {
+            background: var(--surface);
+            padding: 20px;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            transition: var(--transition);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .stat-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .stat-info h3 {
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--text-main);
+        }
+
+        .stat-info span {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        .alerts-container {
+            background: var(--surface);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+
+        .alerts-title {
+            font-size: 15px;
+            font-weight: 800;
+            color: var(--primary);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .alert-item {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .alert-item.expired { background: #fee2e2; color: var(--status-expired); border-right: 4px solid var(--status-expired); }
+        .alert-item.warn-15 { background: #fef2f2; color: var(--status-warn-15); border-right: 4px solid var(--status-warn-15); }
+        .alert-item.warn-30 { background: #fff7ed; color: var(--status-warn-30); border-right: 4px solid var(--status-warn-30); }
+        .alert-item.warn-60 { background: #fefce8; color: #a16207; border-right: 4px solid var(--status-warn-60); }
+
+        .table-card {
+            background: var(--surface);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
+            overflow: hidden;
+        }
+
+        .table-actions {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .filter-group select, .filter-group input {
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 13px;
+            outline: none;
+            background: #fff;
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+            width: 100%;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: right;
+            font-size: 13px;
+        }
+
+        table th {
+            background: #f8fafc;
+            padding: 14px 16px;
+            font-weight: 700;
+            color: var(--text-muted);
+            border-bottom: 1.5px solid var(--border);
+            white-space: nowrap;
+        }
+
+        table td {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-main);
+            vertical-align: middle;
+            white-space: nowrap;
+        }
+
+        table tbody tr:hover {
+            background-color: #f8fafc;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .badge-safe { background: #d1fae5; color: #065f46; }
+        .badge-warn-60 { background: #fef9c3; color: #854d0e; }
+        .badge-warn-30 { background: #ffedd5; color: #9a3412; }
+        .badge-warn-15 { background: #fee2e2; color: #991b1b; }
+        .badge-expired { background: #7f1d1d; color: #ffffff; }
+
+        .btn-action-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            cursor: pointer;
+            font-size: 13px;
+            transition: var(--transition);
+        }
+
+        .btn-edit { background: #e0f2fe; color: #0369a1; }
+        .btn-edit:hover { background: #0284c7; color: #fff; }
+        .btn-delete { background: #fee2e2; color: #b91c1c; }
+        .btn-delete:hover { background: #dc2626; color: #fff; }
+        .btn-view { background: #f3e8ff; color: #7e22ce; }
+        .btn-view:hover { background: #9333ea; color: #fff; }
+
+        /* النوافذ المنبثقة */
+        .modal {
+            position: fixed;
+            top: 0;
+            right: 0;
+            left: 0;
+            bottom: 0;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 15px;
+        }
+
+        .modal.active { display: flex; }
+
+        .modal-content {
+            background: var(--surface);
+            border-radius: 16px;
+            width: 100%;
+            max-width: 650px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);
+            animation: modalPop 0.25s ease;
+        }
+
+        @keyframes modalPop {
+            from { transform: scale(0.95); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .modal-header {
+            padding: 18px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .modal-header h3 {
+            font-size: 17px;
+            font-weight: 800;
+            color: var(--primary);
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 20px;
+            color: var(--text-muted);
+            cursor: pointer;
+        }
+
+        .modal-body { padding: 24px; }
+
+        .modal-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .modal-footer {
+            padding: 16px 24px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            background: #f8fafc;
+            border-radius: 0 0 16px 16px;
+        }
+
+        .empty-state {
+            padding: 45px 20px;
+            text-align: center;
+            color: var(--text-muted);
+        }
+
+        .empty-state i {
+            font-size: 40px;
+            margin-bottom: 12px;
+            color: #cbd5e1;
+        }
+
+        #toast-container {
+            position: fixed;
+            bottom: 25px;
+            left: 25px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toast {
+            background: var(--primary-dark);
+            color: #fff;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            box-shadow: var(--shadow-lg);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: toastIn 0.3s ease;
+        }
+
+        @keyframes toastIn {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        @media (max-width: 992px) {
+            .sidebar { transform: translateX(100%); }
+            .sidebar.show { transform: translateX(0); }
+            .main-wrapper { margin-right: 0; }
+            .toggle-btn { display: block; }
+            .global-search { width: 220px; }
+            .modal-grid { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 600px) {
+            .page-content { padding: 15px; }
+            .stats-grid { grid-template-columns: 1fr; }
+            .global-search { display: none; }
+            .top-navbar { padding: 12px 16px; }
+        }
+
+        @media print {
+            .sidebar, .top-navbar, .table-actions, .btn, #toast-container, .modal, #settings-form-box {
+                display: none !important;
+            }
+            .main-wrapper { margin: 0 !important; }
+            .page-content { padding: 0 !important; }
+            body { background: #fff; }
+            .table-card { border: none; box-shadow: none; }
+            .print-header {
+                display: block !important;
+                text-align: center;
+                margin-bottom: 20px;
+                border-bottom: 2px solid #000;
+                padding-bottom: 10px;
+            }
+        }
+
+        .print-header { display: none; }
+    </style>
+</head>
+<body>
+
+    <div id="toast-container"></div>
+
+    <!-- ==================== شاشة تسجيل الدخول ==================== -->
+    <div id="login-screen">
+        <div class="login-card">
+            <div class="school-title">مدرسة دار العلوم الخاصة</div>
+            <div class="system-title">نظام إدارة النقل المدرسي</div>
+            
+            <form id="login-form" onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label>اسم المستخدم</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-user"></i>
+                        <input type="text" id="login-username" class="form-control" placeholder="أدخل اسم المستخدم" required autocomplete="off">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>كلمة المرور</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-lock"></i>
+                        <input type="password" id="login-password" class="form-control" placeholder="أدخل كلمة المرور" required autocomplete="off">
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width:100%; margin-top: 10px;">
+                    <i class="fa-solid fa-right-to-bracket"></i> تسجيل الدخول
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==================== التطبيق الرئيسي ==================== -->
+    <div id="app-container">
+        
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-brand">
+                <h2>مدرسة دار العلوم الخاصة</h2>
+                <span>النقل المدرسي</span>
+            </div>
+
+            <ul class="sidebar-menu">
+                <li><a href="javascript:void(0)" class="nav-item active" onclick="navigate('dashboard')"><i class="fa-solid fa-chart-pie"></i> لوحة التحكم</a></li>
+                <li><a href="javascript:void(0)" class="nav-item" onclick="navigate('students')"><i class="fa-solid fa-user-graduate"></i> الطلاب</a></li>
+                <li><a href="javascript:void(0)" class="nav-item" onclick="navigate('buses')"><i class="fa-solid fa-bus"></i> الحافلات</a></li>
+                <li><a href="javascript:void(0)" class="nav-item" onclick="navigate('drivers')"><i class="fa-solid fa-id-card"></i> السائقون</a></li>
+                <li><a href="javascript:void(0)" class="nav-item" onclick="navigate('supervisors')"><i class="fa-solid fa-user-tie"></i> المشرفات</a></li>
+                <li><a href="javascript:void(0)" class="nav-item" onclick="navigate('areas')"><i class="fa-solid fa-map-location-dot"></i> المناطق</a></li>
+                <li><a href="javascript:void(0)" class="nav-item" onclick="navigate('alerts')"><i class="fa-solid fa-bell"></i> التنبيهات</a></li>
+                <li><a href="javascript:void(0)" class="nav-item" onclick="navigate('reports')"><i class="fa-solid fa-file-invoice"></i> التقارير</a></li>
+                <li><a href="javascript:void(0)" class="nav-item" onclick="navigate('settings')"><i class="fa-solid fa-gear"></i> الإعدادات</a></li>
+            </ul>
+
+            <div class="sidebar-footer">
+                <button class="btn btn-danger" style="width: 100%;" onclick="handleLogout()">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i> تسجيل الخروج
+                </button>
+            </div>
+        </aside>
+
+        <div class="main-wrapper">
+            
+            <header class="top-navbar">
+                <div class="nav-controls">
+                    <button class="toggle-btn" onclick="toggleSidebar()"><i class="fa-solid fa-bars"></i></button>
+                    <div style="font-weight: 800; color: var(--primary);">مدرسة دار العلوم الخاصة</div>
+                </div>
+
+                <div class="global-search">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" id="global-search-input" placeholder="بحث شامل (طالب، حافلة، سائق، منطقة...)" oninput="handleGlobalSearch(this.value)">
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <span style="font-size: 13px; font-weight: 700; background: #e2e8f0; padding: 6px 12px; border-radius: 20px;">
+                        <i class="fa-solid fa-user-shield"></i> مسؤول النظام
+                    </span>
+                </div>
+            </header>
+
+            <main class="page-content">
+                
+                <div class="print-header">
+                    <h2>مدرسة دار العلوم الخاصة</h2>
+                    <h4>تقرير نظام إدارة النقل المدرسي</h4>
+                    <p id="print-date"></p>
+                </div>
+
+                <!-- 1. لوحة التحكم -->
+                <section id="view-dashboard" class="section-view active">
+                    <div class="page-header">
+                        <div>
+                            <h1>لوحة التحكم</h1>
+                            <p>مرحباً بك في نظام إدارة النقل المدرسي - مدرسة دار العلوم الخاصة</p>
+                        </div>
+                    </div>
+
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon" style="background:#dbeafe; color:#1d4ed8;"><i class="fa-solid fa-user-graduate"></i></div>
+                            <div class="stat-info"><h3 id="stat-students">0</h3><span>إجمالي الطلاب</span></div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon" style="background:#fef3c7; color:#d97706;"><i class="fa-solid fa-bus"></i></div>
+                            <div class="stat-info"><h3 id="stat-buses">0</h3><span>إجمالي الحافلات</span></div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon" style="background:#ccfbf1; color:#0f766e;"><i class="fa-solid fa-id-card"></i></div>
+                            <div class="stat-info"><h3 id="stat-drivers">0</h3><span>إجمالي السائقين</span></div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon" style="background:#f3e8ff; color:#7e22ce;"><i class="fa-solid fa-user-tie"></i></div>
+                            <div class="stat-info"><h3 id="stat-supervisors">0</h3><span>إجمالي المشرفات</span></div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon" style="background:#e0e7ff; color:#4338ca;"><i class="fa-solid fa-map-location-dot"></i></div>
+                            <div class="stat-info"><h3 id="stat-areas">0</h3><span>إجمالي المناطق</span></div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon" style="background:#d1fae5; color:#047857;"><i class="fa-solid fa-circle-check"></i></div>
+                            <div class="stat-info"><h3 id="stat-permits-safe">0</h3><span>تصاريح سارية</span></div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon" style="background:#ffedd5; color:#c2410c;"><i class="fa-solid fa-circle-exclamation"></i></div>
+                            <div class="stat-info"><h3 id="stat-permits-expiring">0</h3><span>تنتهي قريباً</span></div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon" style="background:#fee2e2; color:#b91c1c;"><i class="fa-solid fa-circle-xmark"></i></div>
+                            <div class="stat-info"><h3 id="stat-permits-expired">0</h3><span>تصاريح منتهية</span></div>
+                        </div>
+                    </div>
+
+                    <div class="alerts-container">
+                        <div class="alerts-title">
+                            <i class="fa-solid fa-triangle-exclamation" style="color: var(--gold);"></i>
+                            <span>التنبيهات المهمة للتصاريح</span>
+                        </div>
+                        <div id="dashboard-alerts-list"></div>
+                    </div>
+                </section>
+
+                <!-- 2. الطلاب -->
+                <section id="view-students" class="section-view">
+                    <div class="page-header">
+                        <div>
+                            <h1>إدارة الطلاب</h1>
+                            <p>قائمة الطلاب المسجلين في خدمة النقل المدرسي</p>
+                        </div>
+                        <button class="btn btn-primary" onclick="openStudentModal()"><i class="fa-solid fa-plus"></i> إضافة طالب</button>
+                    </div>
+
+                    <div class="table-card">
+                        <div class="table-actions">
+                            <div class="filter-group">
+                                <input type="text" id="filter-student-search" placeholder="بحث بالاسم أو الرقم..." oninput="renderStudentsTable()">
+                                <select id="filter-student-area" onchange="renderStudentsTable()"><option value="">جميع المناطق</option></select>
+                                <select id="filter-student-bus" onchange="renderStudentsTable()"><option value="">جميع الحافلات</option></select>
+                            </div>
+                            <button class="btn btn-success" onclick="exportStudentsExcel()"><i class="fa-solid fa-file-excel"></i> تصدير Excel</button>
+                        </div>
+                        <div class="table-responsive">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>رقم الطالب</th>
+                                        <th>اسم الطالب</th>
+                                        <th>المنطقة</th>
+                                        <th>رقم الحافلة</th>
+                                        <th>السائق</th>
+                                        <th>المشرفة</th>
+                                        <th>حالة النقل</th>
+                                        <th>ملاحظات</th>
+                                        <th>الإجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="students-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 3. الحافلات -->
+                <section id="view-buses" class="section-view">
+                    <div class="page-header">
+                        <div>
+                            <h1>أسطول الحافلات</h1>
+                            <p>إدارة وتتبع تصاريح الحافلات (DOT) وسعتها</p>
+                        </div>
+                        <button class="btn btn-primary" onclick="openBusModal()"><i class="fa-solid fa-plus"></i> إضافة حافلة</button>
+                    </div>
+
+                    <div class="table-card">
+                        <div class="table-actions">
+                            <div class="filter-group">
+                                <input type="text" id="filter-bus-search" placeholder="بحث برقم الحافلة أو DOT أو اللوحة..." oninput="renderBusesTable()">
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>رقم الحافلة</th>
+                                        <th>رقم DOT</th>
+                                        <th>رقم اللوحة</th>
+                                        <th>المنطقة</th>
+                                        <th>السائق</th>
+                                        <th>المشرفة</th>
+                                        <th>الطلاب / السعة</th>
+                                        <th>انتهاء التصريح</th>
+                                        <th>حالة التصريح</th>
+                                        <th>الإجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="buses-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 4. السائقون -->
+                <section id="view-drivers" class="section-view">
+                    <div class="page-header">
+                        <div>
+                            <h1>السائقون</h1>
+                            <p>متابعة بيانات وتصاريح السائقين</p>
+                        </div>
+                        <button class="btn btn-primary" onclick="openDriverModal()"><i class="fa-solid fa-plus"></i> إضافة سائق</button>
+                    </div>
+
+                    <div class="table-card">
+                        <div class="table-responsive">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>اسم السائق</th>
+                                        <th>رقم التصريح</th>
+                                        <th>رقم الهاتف</th>
+                                        <th>المنطقة</th>
+                                        <th>الحافلة المعينة</th>
+                                        <th>انتهاء التصريح</th>
+                                        <th>حالة التصريح</th>
+                                        <th>الإجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="drivers-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 5. المشرفات -->
+                <section id="view-supervisors" class="section-view">
+                    <div class="page-header">
+                        <div>
+                            <h1>المشرفات</h1>
+                            <p>متابعة بيانات وتصاريح المشرفات</p>
+                        </div>
+                        <button class="btn btn-primary" onclick="openSupervisorModal()"><i class="fa-solid fa-plus"></i> إضافة مشرفة</button>
+                    </div>
+
+                    <div class="table-card">
+                        <div class="table-responsive">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>اسم المشرفة</th>
+                                        <th>رقم التصريح</th>
+                                        <th>رقم الهاتف</th>
+                                        <th>المنطقة</th>
+                                        <th>الحافلة المعينة</th>
+                                        <th>انتهاء التصريح</th>
+                                        <th>حالة التصريح</th>
+                                        <th>الإجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="supervisors-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 6. المناطق -->
+                <section id="view-areas" class="section-view">
+                    <div class="page-header">
+                        <div>
+                            <h1>المناطق</h1>
+                            <p>إدارة وتوزيع خطوط النقل الجغرافية</p>
+                        </div>
+                        <button class="btn btn-primary" onclick="openAreaModal()"><i class="fa-solid fa-plus"></i> إضافة منطقة</button>
+                    </div>
+
+                    <div class="table-card">
+                        <div class="table-responsive">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>اسم المنطقة</th>
+                                        <th>عدد الطلاب</th>
+                                        <th>عدد الحافلات</th>
+                                        <th>عدد السائقين</th>
+                                        <th>عدد المشرفات</th>
+                                        <th>الإجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="areas-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 7. التنبيهات -->
+                <section id="view-alerts" class="section-view">
+                    <div class="page-header">
+                        <div>
+                            <h1>نظام مراقبة التصاريح والتنبيهات</h1>
+                            <p>كافة التنبيهات الخاصة بانتهاء تصاريح الحافلات والسائقين والمشرفات</p>
+                        </div>
+                    </div>
+                    <div id="full-alerts-list"></div>
+                </section>
+
+                <!-- 8. التقارير -->
+                <section id="view-reports" class="section-view">
+                    <div class="page-header">
+                        <div>
+                            <h1>التقارير الشاملة</h1>
+                            <p>استخراج وطباعة تقارير منظومة النقل</p>
+                        </div>
+                        <button class="btn btn-primary" onclick="window.print()"><i class="fa-solid fa-print"></i> طباعة التقرير</button>
+                    </div>
+
+                    <div class="table-card" style="padding: 16px 20px; margin-bottom: 20px;">
+                        <div class="filter-group">
+                            <select id="report-type-select" onchange="renderActiveReport()">
+                                <option value="students">تقرير الطلاب</option>
+                                <option value="buses">تقرير الحافلات</option>
+                                <option value="drivers">تقرير السائقين</option>
+                                <option value="supervisors">تقرير المشرفات</option>
+                                <option value="expiring_permits">تقرير التصاريح المنتهية والوشيكة</option>
+                            </select>
+                            <button class="btn btn-success" onclick="exportCurrentReportExcel()"><i class="fa-solid fa-file-excel"></i> تصدير Excel</button>
+                        </div>
+                    </div>
+
+                    <div class="table-card">
+                        <div class="table-responsive">
+                            <table id="report-table">
+                                <thead id="report-table-head"></thead>
+                                <tbody id="report-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 9. الإعدادات -->
+                <section id="view-settings" class="section-view">
+                    <div class="page-header">
+                        <div>
+                            <h1>الإعدادات والاتصال بـ Firebase</h1>
+                            <p>مدرسة دار العلوم الخاصة - إعدادات النظام وقاعدة البيانات</p>
+                        </div>
+                    </div>
+
+                    <div class="modal-grid" id="settings-form-box">
+                        <div class="table-card" style="padding: 20px;">
+                            <h3 style="margin-bottom: 15px; color: var(--primary);">معلومات المدرسة</h3>
+                            <div class="form-group">
+                                <label>اسم المدرسة</label>
+                                <input type="text" class="form-control" value="مدرسة دار العلوم الخاصة" readonly>
+                            </div>
+                            <div class="form-group">
+                                <label>تنبيه التصاريح المسبق (أيام)</label>
+                                <input type="number" id="setting-warn-days" class="form-control" value="30">
+                            </div>
+                            <button class="btn btn-primary" onclick="saveSystemSettings()"><i class="fa-solid fa-floppy-disk"></i> حفظ الإعدادات</button>
+                        </div>
+
+                        <div class="table-card" style="padding: 20px;">
+                            <h3 style="margin-bottom: 15px; color: var(--primary);">حالة Firebase Firestore</h3>
+                            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">
+                                يتم حفظ وتحديث كافة السجلات مباشرة في مجموعات Firestore مع حقول التتبع <code>createdAt</code> و <code>updatedAt</code>.
+                            </p>
+                            <div id="firebase-status-badge" style="padding: 10px; border-radius: 8px; background: #ecfdf5; color: #065f46; font-weight: 700; font-size: 13px;">
+                                <i class="fa-solid fa-circle-check"></i> متصل بنجاح مع Firestore
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- ==================== النوافذ المنبثقة (MODALS) ==================== -->
+
+    <!-- مودال الطالب -->
+    <div class="modal" id="student-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="student-modal-title">إضافة طالب</h3>
+                <button class="modal-close" onclick="closeModal('student-modal')">&times;</button>
+            </div>
+            <form id="student-form" onsubmit="saveStudent(event)">
+                <div class="modal-body">
+                    <input type="hidden" id="student-edit-id">
+                    <div class="modal-grid">
+                        <div class="form-group">
+                            <label>رقم الطالب *</label>
+                            <input type="text" id="student-code" class="form-control" required placeholder="مثال: STU-101">
+                        </div>
+                        <div class="form-group">
+                            <label>اسم الطالب *</label>
+                            <input type="text" id="student-name" class="form-control" required placeholder="الاسم ثلاثي أو رباعي">
+                        </div>
+                    </div>
+                    <div class="modal-grid">
+                        <div class="form-group">
+                            <label>رقم الحافلة *</label>
+                            <select id="student-bus-select" class="form-control" required onchange="onStudentBusChanged(this.value)">
+                                <option value="">اختر الحافلة</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>المنطقة (تلقائي)</label>
+                            <input type="text" id="student-area" class="form-control" readonly>
+                        </div>
+                    </div>
+                    <div class="modal-grid">
+                        <div class="form-group">
+                            <label>اسم السائق (تلقائي)</label>
+                            <input type="text" id="student-driver" class="form-control" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label>اسم المشرفة (تلقائي)</label>
+                            <input type="text" id="student-supervisor" class="form-control" readonly>
+                        </div>
+                    </div>
+                    <div class="modal-grid">
+                        <div class="form-group">
+                            <label>حالة النقل</label>
+                            <select id="student-status" class="form-control">
+                                <option value="نشط">نشط</option>
+                                <option value="معلق">معلق مؤقتاً</option>
+                                <option value="ملغي">ملغي</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>ملاحظات</label>
+                            <input type="text" id="student-notes" class="form-control" placeholder="أي ملاحظات إضافية">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('student-modal')">إلغاء</button>
+                    <button type="submit" class="btn btn-primary">حفظ في السحابة</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- مودال الحافلة -->
+    <div class="modal" id="bus-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="bus-modal-title">إضافة حافلة</h3>
+                <button class="modal-close" onclick="closeModal('bus-modal')">&times;</button>
+            </div>
+            <form id="bus-form" onsubmit="saveBus(event)">
+                <div class="modal-body">
+                    <input type="hidden" id="bus-edit-id">
+                    <div class="modal-grid">
+                        <div class="form-group">
+                            <label>رقم الحافلة *</label>
+                            <input type="text" id="bus-number" class="form-control" required placeholder="مثال: 25">
+                        </div>
+                        <div class="form-group">
+                            <label>رقم النقل المتكامل DOT *</label>
+                            <input type="text" id="bus-dot" class="form-control" required placeholder="DOT-XXXX">
+                        </div>
+                    </div>
+                    <div class="modal-grid">
+                        <div class="form-group">
+                            <label>رقم لوحة الحافلة *</label>
+                            <input type="text" id="bus-plate" class="form-control" required placeholder="رقم اللوحة">
+                        </div>
+                        <div class="form-group">
+                            <label>تاريخ انتهاء تصريح الحافلة *</label>
+                            <input type="date" id="bus-permit-expiry" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="modal-grid">
+                        <div class="form-group">
+                            <label>المنطقة *</label>
+                            <select id="bus-area-select" class="form-control" required>
+                                <option value="">اختر المنطقة</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>سعة الحافلة *</label>
+                            <input type="number" id="bus-capacity" class="form-control" min="1" required placeholder="عدد المقاعد">
+                        </div>
+                    </div>
+                    <div class="modal-grid">
+                        <div class="form-group">
+                            <label>اسم السائق</label>
+                            <select id="bus-driver-select" class="form-control">
+                                <option value="">اختر السائق</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>اسم المشرفة</label>
+                            <select id="bus-supervisor-select" class="form-control">
+                                <option value="">اختر المشرفة</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>ملاحظات</label>
+                        <input type="text" id="bus-notes" class="form-control">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('bus-modal')">إلغاء</button>
+                    <button type="submit" class="btn btn-primary">حفظ في السحابة</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- مودال فحص الحافلة والطلاب المسجلين -->
+    <div class="modal" id="bus-view-modal">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <h3 id="bus-view-title">تفاصيل الحافلة</h3>
+                <button class="modal-close" onclick="closeModal('bus-view-modal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="bus-view-info" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 20px; background: #f8fafc; padding: 15px; border-radius: 10px;"></div>
+                <h4 style="margin-bottom: 10px; color: var(--primary);">الطلاب المسجلون في هذه الحافلة:</h4>
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>رقم الطالب</th>
+                                <th>اسم الطالب</th>
+                                <th>المنطقة</th>
+                                <th>حالة النقل</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bus-view-students-table"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('bus-view-modal')">إغلاق</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- مودال السائق -->
+    <div class="modal" id="driver-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="driver-modal-title">إضافة سائق</h3>
+                <button class="modal-close" onclick="closeModal('driver-modal')">&times;</button>
+            </div>
+            <form id="driver-form" onsubmit="saveDriver(event)">
+                <div class="modal-body">
+                    <input type="hidden" id="driver-edit-id">
+                    <div class="modal-grid">
+                        <div class="form-group">
+                            <label>اسم السائق *</label>
+                            <input type="text" id="driver-name" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label>رقم تصريح السائق *</label>
+                            <input type="text" id="driver-permit" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="modal-grid">
+                        <div class="form-group">
+                            <label>رقم الهاتف *</label>
+                            <input type="text" id="driver-phone" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label>تاريخ انتهاء التصريح *</label>
+                            <input type="date" id="driver-permit-expiry" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>المنطقة</label>
+                        <select id="driver-area-select" class="form-control">
+                            <option value="">اختر المنطقة</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>ملاحظات</label>
+                        <input type="text" id="driver-notes" class="form-control">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('driver-modal')">إلغاء</button>
+                    <button type="submit" class="btn btn-primary">حفظ في السحابة</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- مودال المشرفة -->
+    <div class="modal" id="supervisor-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="supervisor-modal-title">إضافة مشرفة</h3>
+                <button class="modal-close" onclick="closeModal('supervisor-modal')">&times;</button>
+            </div>
+            <form id="supervisor-form" onsubmit="saveSupervisor(event)">
+                <div class="modal-body">
+                    <input type="hidden" id="supervisor-edit-id">
+                    <div class="modal-grid">
+                        <div class="form-group">
+                            <label>اسم المشرفة *</label>
+                            <input type="text" id="supervisor-name" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label>رقم تصريح المشرفة *</label>
+                            <input type="text" id="supervisor-permit" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="modal-grid">
+                        <div class="form-group">
+                            <label>رقم الهاتف *</label>
+                            <input type="text" id="supervisor-phone" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label>تاريخ انتهاء التصريح *</label>
+                            <input type="date" id="supervisor-permit-expiry" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>المنطقة</label>
+                        <select id="supervisor-area-select" class="form-control">
+                            <option value="">اختر المنطقة</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>ملاحظات</label>
+                        <input type="text" id="supervisor-notes" class="form-control">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('supervisor-modal')">إلغاء</button>
+                    <button type="submit" class="btn btn-primary">حفظ في السحابة</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- مودال المنطقة -->
+    <div class="modal" id="area-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="area-modal-title">إضافة منطقة</h3>
+                <button class="modal-close" onclick="closeModal('area-modal')">&times;</button>
+            </div>
+            <form id="area-form" onsubmit="saveArea(event)">
+                <div class="modal-body">
+                    <input type="hidden" id="area-edit-id">
+                    <div class="form-group">
+                        <label>اسم المنطقة *</label>
+                        <input type="text" id="area-name" class="form-control" required placeholder="مثال: الفوعة، المويجعي...">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('area-modal')">إلغاء</button>
+                    <button type="submit" class="btn btn-primary">حفظ في السحابة</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==================== جافاسكريبت وتهيئة FIREBASE ==================== -->
+    <script>
+        /*
+        * -------------------------------------------------------------
+        * مدرسة دار العلوم الخاصة - إعدادات Firebase المباشرة
+        * -------------------------------------------------------------
+        */
+        const firebaseConfig = {
+          apiKey: "AIzaSyCayYiftqJbg1TdrrDbp85QXIZDZLPiWbY",
+          authDomain: "abdo-app-17731.firebaseapp.com",
+          databaseURL: "https://abdo-app-17731-default-rtdb.firebaseio.com",
+          projectId: "abdo-app-17731",
+          storageBucket: "abdo-app-17731.firebasestorage.app",
+          messagingSenderId: "1016434531422",
+          appId: "1:1016434531422:web:1ab03b499b6d3012d7a8cf"
+          
+        };
+
+        // تهيئة Firebase
+        let db = null;
+        let auth = null;
+        let isFirebaseActive = false;
+
+        try {
+            if (!firebase.apps.length) {
+                firebase.initializeApp(firebaseConfig);
+            }
+            db = firebase.firestore();
+            auth = firebase.auth();
+            isFirebaseActive = true;
+        } catch (e) {
+            console.warn("Firebase initialization warning (using live hybrid engine):", e);
+        }
+
+        // بيانات الدخول الثابتة للمسؤول
+        const ADMIN_CREDENTIALS = {
+            username: "admin",
+            password: "Abdo123"
+        };
+
+        // مصفوفات البيانات الحية - تبدأ فارغة تماماً دون أي بيانات وهمية
+        let LiveData = {
+            students: [],
+            drivers: [],
+            supervisors: [],
+            buses: [],
+            areas: [],
+            settings: { warnDays: 30 }
+        };
+
+        // ==================== الاستماع والمزامنة السحابية الحية (Firestore Listeners) ====================
+        function setupLiveListeners() {
+            if (!isFirebaseActive || !db) {
+                fallbackLocalSync();
+                return;
+            }
+
+            const collections = ['students', 'drivers', 'supervisors', 'buses', 'areas', 'settings'];
+            
+            collections.forEach(colName => {
+                db.collection(colName).onSnapshot(snapshot => {
+                    if (colName === 'settings') {
+                        snapshot.forEach(doc => {
+                            if (doc.id === 'general') LiveData.settings = doc.data();
+                        });
+                    } else {
+                        const items = [];
+                        snapshot.forEach(doc => {
+                            items.push({ id: doc.id, ...doc.data() });
+                        });
+                        LiveData[colName] = items;
+                    }
+                    saveLocalCache();
+                    refreshAllViews();
+                }, err => {
+                    console.warn(`Firestore collection [${colName}] fallback to cache:`, err);
+                    fallbackLocalSync();
+                });
+            });
+        }
+
+        function fallbackLocalSync() {
+            const cached = localStorage.getItem("DAR_REAL_DB");
+            if (cached) {
+                try { LiveData = JSON.parse(cached); } catch(e) {}
+            }
+            refreshAllViews();
+        }
+
+        function saveLocalCache() {
+            localStorage.setItem("DAR_REAL_DB", JSON.stringify(LiveData));
+        }
+
+        // ==================== نظام حساب ومراقبة التصاريح ====================
+        function calculatePermitStatus(expiryDateStr) {
+            if (!expiryDateStr) return { status: 'safe', label: 'غير محدد', days: 999, badgeClass: 'badge-safe' };
+            
+            const today = new Date();
+            today.setHours(0,0,0,0);
+            const expiry = new Date(expiryDateStr);
+            expiry.setHours(0,0,0,0);
+
+            const diffTime = expiry - today;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+            if (diffDays < 0) {
+                return { status: 'expired', label: 'منتهي الصلاحية', days: diffDays, badgeClass: 'badge-expired', alertType: 'expired' };
+            } else if (diffDays <= 15) {
+                return { status: 'warn-15', label: `متبقي ${diffDays} يوم (حرج)`, days: diffDays, badgeClass: 'badge-warn-15', alertType: 'warn-15' };
+            } else if (diffDays <= 30) {
+                return { status: 'warn-30', label: `متبقي ${diffDays} يوم`, days: diffDays, badgeClass: 'badge-warn-30', alertType: 'warn-30' };
+            } else if (diffDays <= 60) {
+                return { status: 'warn-60', label: `متبقي ${diffDays} يوم`, days: diffDays, badgeClass: 'badge-warn-60', alertType: 'warn-60' };
+            } else {
+                return { status: 'safe', label: `ساري (${diffDays} يوم)`, days: diffDays, badgeClass: 'badge-safe', alertType: 'safe' };
+            }
+        }
+
+        // ==================== تسجيل الدخول والمصادقة ====================
+        function checkAuth() {
+            const isAuth = sessionStorage.getItem("DAR_AUTH_SESSION");
+            if (isAuth === "true") {
+                document.getElementById("login-screen").style.display = "none";
+                document.getElementById("app-container").style.display = "block";
+                refreshAllViews();
+            } else {
+                document.getElementById("login-screen").style.display = "flex";
+                document.getElementById("app-container").style.display = "none";
+            }
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const u = document.getElementById("login-username").value.trim();
+            const p = document.getElementById("login-password").value.trim();
+
+            if (u === ADMIN_CREDENTIALS.username && p === ADMIN_CREDENTIALS.password) {
+                sessionStorage.setItem("DAR_AUTH_SESSION", "true");
+                showToast("تم تسجيل الدخول بنجاح. مرحباً بك في مدرسة دار العلوم الخاصة", "success");
+                checkAuth();
+            } else {
+                showToast("خطأ: اسم المستخدم أو كلمة المرور غير صحيحة", "danger");
+            }
+        }
+
+        function handleLogout() {
+            sessionStorage.removeItem("DAR_AUTH_SESSION");
+            showToast("تم تسجيل الخروج بنجاح", "info");
+            checkAuth();
+        }
+
+        // ==================== التنقل والعرض ====================
+        function navigate(viewId) {
+            document.querySelectorAll(".section-view").forEach(el => el.classList.remove("active"));
+            document.querySelectorAll(".sidebar-menu a").forEach(el => el.classList.remove("active"));
+
+            const target = document.getElementById(`view-${viewId}`);
+            if (target) target.classList.add("active");
+
+            const navLink = Array.from(document.querySelectorAll('.sidebar-menu a')).find(a => a.getAttribute('onclick')?.includes(viewId));
+            if (navLink) navLink.classList.add("active");
+
+            if (window.innerWidth <= 992) {
+                document.getElementById("sidebar").classList.remove("show");
+            }
+
+            refreshAllViews();
+        }
+
+        function toggleSidebar() {
+            document.getElementById("sidebar").classList.toggle("show");
+        }
+
+        function refreshAllViews() {
+            updateDashboardStats();
+            renderStudentsTable();
+            renderBusesTable();
+            renderDriversTable();
+            renderSupervisorsTable();
+            renderAreasTable();
+            renderAlertsView();
+            renderActiveReport();
+            populateSelectOptions();
+        }
+
+        // تحديث إحصائيات لوحة التحكم
+        function updateDashboardStats() {
+            document.getElementById("stat-students").innerText = LiveData.students.length;
+            document.getElementById("stat-buses").innerText = LiveData.buses.length;
+            document.getElementById("stat-drivers").innerText = LiveData.drivers.length;
+            document.getElementById("stat-supervisors").innerText = LiveData.supervisors.length;
+            document.getElementById("stat-areas").innerText = LiveData.areas.length;
+
+            let safeCount = 0, expSoonCount = 0, expiredCount = 0;
+            const alerts = [];
+
+            LiveData.buses.forEach(b => {
+                const s = calculatePermitStatus(b.expiry);
+                if (s.status === 'expired') { expiredCount++; alerts.push({ type: s.alertType, msg: `حافلة [${b.number}] - تصريح DOT (${b.dot}) منتهي الصلاحية!` }); }
+                else if (s.status.startsWith('warn')) { expSoonCount++; alerts.push({ type: s.alertType, msg: `حافلة [${b.number}] - تصريح DOT ينتهي خلال (${s.days} يوم)` }); }
+                else if (b.expiry) safeCount++;
+            });
+
+            LiveData.drivers.forEach(d => {
+                const s = calculatePermitStatus(d.expiry);
+                if (s.status === 'expired') { expiredCount++; alerts.push({ type: s.alertType, msg: `السائق [${d.name}] - تصريح رقم (${d.permit}) منتهي الصلاحية!` }); }
+                else if (s.status.startsWith('warn')) { expSoonCount++; alerts.push({ type: s.alertType, msg: `السائق [${d.name}] - التصريح ينتهي خلال (${s.days} يوم)` }); }
+                else if (d.expiry) safeCount++;
+            });
+
+            LiveData.supervisors.forEach(sup => {
+                const s = calculatePermitStatus(sup.expiry);
+                if (s.status === 'expired') { expiredCount++; alerts.push({ type: s.alertType, msg: `المشرفة [${sup.name}] - تصريح رقم (${sup.permit}) منتهي الصلاحية!` }); }
+                else if (s.status.startsWith('warn')) { expSoonCount++; alerts.push({ type: s.alertType, msg: `المشرفة [${sup.name}] - التصريح ينتهي خلال (${s.days} يوم)` }); }
+                else if (sup.expiry) safeCount++;
+            });
+
+            document.getElementById("stat-permits-safe").innerText = safeCount;
+            document.getElementById("stat-permits-expiring").innerText = expSoonCount;
+            document.getElementById("stat-permits-expired").innerText = expiredCount;
+
+            const alertsListEl = document.getElementById("dashboard-alerts-list");
+            if (alerts.length === 0) {
+                alertsListEl.innerHTML = `<div style="color: var(--text-muted); font-size: 13px; padding: 10px;"><i class="fa-solid fa-info-circle"></i> لا توجد تنبيهات عاجلة حالياً.</div>`;
+            } else {
+                alertsListEl.innerHTML = alerts.slice(0, 6).map(a => `
+                    <div class="alert-item ${a.type}">
+                        <span><i class="fa-solid fa-triangle-exclamation"></i> ${a.msg}</span>
+                    </div>
+                `).join('');
+            }
+        }
+
+        // جدول الطلاب
+        function renderStudentsTable() {
+            const tbody = document.getElementById("students-table-body");
+            const filterSearch = document.getElementById("filter-student-search")?.value.toLowerCase() || "";
+            const filterArea = document.getElementById("filter-student-area")?.value || "";
+            const filterBus = document.getElementById("filter-student-bus")?.value || "";
+
+            const filtered = LiveData.students.filter(s => {
+                const matchSearch = (s.name || "").toLowerCase().includes(filterSearch) || (s.code || "").toLowerCase().includes(filterSearch);
+                const matchArea = filterArea === "" || s.area === filterArea;
+                const matchBus = filterBus === "" || s.busNumber === filterBus;
+                return matchSearch && matchArea && matchBus;
+            });
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="9" class="empty-state"><i class="fa-solid fa-user-graduate"></i><p>لا يوجد طلاب مسجلون حتى الآن. أضف طالباً جديداً.</p></td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(s => `
+                <tr>
+                    <td><strong>${s.code || '-'}</strong></td>
+                    <td>${s.name}</td>
+                    <td>${s.area || '-'}</td>
+                    <td><span class="badge" style="background:#e0f2fe; color:#0369a1;"><i class="fa-solid fa-bus"></i> حافلة ${s.busNumber}</span></td>
+                    <td>${s.driver || '-'}</td>
+                    <td>${s.supervisor || '-'}</td>
+                    <td><span class="badge ${s.status === 'نشط' ? 'badge-safe' : 'badge-warn-30'}">${s.status || 'نشط'}</span></td>
+                    <td>${s.notes || '-'}</td>
+                    <td>
+                        <button class="btn-action-icon btn-edit" onclick="editStudent('${s.id}')" title="تعديل"><i class="fa-solid fa-pen"></i></button>
+                        <button class="btn-action-icon btn-delete" onclick="deleteItem('students', '${s.id}')" title="حذف"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // جدول الحافلات
+        function renderBusesTable() {
+            const tbody = document.getElementById("buses-table-body");
+            const filterSearch = document.getElementById("filter-bus-search")?.value.toLowerCase() || "";
+
+            const filtered = LiveData.buses.filter(b => {
+                return (b.number || "").toLowerCase().includes(filterSearch) || (b.dot || "").toLowerCase().includes(filterSearch) || (b.plate || "").toLowerCase().includes(filterSearch);
+            });
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="10" class="empty-state"><i class="fa-solid fa-bus"></i><p>لا توجد حافلات مسجلة. أضف حافلة للأسطول.</p></td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(b => {
+                const studentCount = LiveData.students.filter(s => s.busNumber === b.number).length;
+                const permit = calculatePermitStatus(b.expiry);
+                return `
+                <tr>
+                    <td><strong>حافلة ${b.number}</strong></td>
+                    <td>${b.dot || '-'}</td>
+                    <td>${b.plate || '-'}</td>
+                    <td>${b.area || '-'}</td>
+                    <td>${b.driver || '<span style="color:var(--text-muted)">غير محدد</span>'}</td>
+                    <td>${b.supervisor || '<span style="color:var(--text-muted)">غير محدد</span>'}</td>
+                    <td><strong>${studentCount}</strong> / ${b.capacity || 0}</td>
+                    <td>${b.expiry || '-'}</td>
+                    <td><span class="badge ${permit.badgeClass}">${permit.label}</span></td>
+                    <td>
+                        <button class="btn-action-icon btn-view" onclick="viewBusDetails('${b.id}')" title="عرض الطلاب"><i class="fa-solid fa-users-viewfinder"></i></button>
+                        <button class="btn-action-icon btn-edit" onclick="editBus('${b.id}')" title="تعديل"><i class="fa-solid fa-pen"></i></button>
+                        <button class="btn-action-icon btn-delete" onclick="deleteItem('buses', '${b.id}')" title="حذف"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                </tr>
+                `;
+            }).join('');
+        }
+
+        // جدول السائقين
+        function renderDriversTable() {
+            const tbody = document.getElementById("drivers-table-body");
+            if (LiveData.drivers.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="empty-state"><i class="fa-solid fa-id-card"></i><p>لا يوجد سائقون مسجلون حتى الآن.</p></td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = LiveData.drivers.map(d => {
+                const permit = calculatePermitStatus(d.expiry);
+                return `
+                <tr>
+                    <td><strong>${d.name}</strong></td>
+                    <td>${d.permit || '-'}</td>
+                    <td>${d.phone || '-'}</td>
+                    <td>${d.area || '-'}</td>
+                    <td>${d.busAssigned ? `حافلة ${d.busAssigned}` : '<span style="color:var(--text-muted)">بدون حافلة</span>'}</td>
+                    <td>${d.expiry || '-'}</td>
+                    <td><span class="badge ${permit.badgeClass}">${permit.label}</span></td>
+                    <td>
+                        <button class="btn-action-icon btn-edit" onclick="editDriver('${d.id}')" title="تعديل"><i class="fa-solid fa-pen"></i></button>
+                        <button class="btn-action-icon btn-delete" onclick="deleteItem('drivers', '${d.id}')" title="حذف"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                </tr>
+                `;
+            }).join('');
+        }
+
+        // جدول المشرفات
+        function renderSupervisorsTable() {
+            const tbody = document.getElementById("supervisors-table-body");
+            if (LiveData.supervisors.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="empty-state"><i class="fa-solid fa-user-tie"></i><p>لا توجد مشرفات مسجلات حتى الآن.</p></td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = LiveData.supervisors.map(sup => {
+                const permit = calculatePermitStatus(sup.expiry);
+                return `
+                <tr>
+                    <td><strong>${sup.name}</strong></td>
+                    <td>${sup.permit || '-'}</td>
+                    <td>${sup.phone || '-'}</td>
+                    <td>${sup.area || '-'}</td>
+                    <td>${sup.busAssigned ? `حافلة ${sup.busAssigned}` : '<span style="color:var(--text-muted)">بدون حافلة</span>'}</td>
+                    <td>${sup.expiry || '-'}</td>
+                    <td><span class="badge ${permit.badgeClass}">${permit.label}</span></td>
+                    <td>
+                        <button class="btn-action-icon btn-edit" onclick="editSupervisor('${sup.id}')" title="تعديل"><i class="fa-solid fa-pen"></i></button>
+                        <button class="btn-action-icon btn-delete" onclick="deleteItem('supervisors', '${sup.id}')" title="حذف"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                </tr>
+                `;
+            }).join('');
+        }
+
+        // جدول المناطق
+        function renderAreasTable() {
+            const tbody = document.getElementById("areas-table-body");
+            if (LiveData.areas.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="empty-state"><i class="fa-solid fa-map-location-dot"></i><p>لا توجد مناطق جغرافية مسجلة.</p></td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = LiveData.areas.map(a => {
+                const sCount = LiveData.students.filter(s => s.area === a.name).length;
+                const bCount = LiveData.buses.filter(b => b.area === a.name).length;
+                const dCount = LiveData.drivers.filter(d => d.area === a.name).length;
+                const supCount = LiveData.supervisors.filter(sup => sup.area === a.name).length;
+
+                return `
+                <tr>
+                    <td><strong><i class="fa-solid fa-location-dot" style="color: var(--accent);"></i> ${a.name}</strong></td>
+                    <td>${sCount} طالب</td>
+                    <td>${bCount} حافلات</td>
+                    <td>${dCount} سائقين</td>
+                    <td>${supCount} مشرفات</td>
+                    <td>
+                        <button class="btn-action-icon btn-edit" onclick="editArea('${a.id}')" title="تعديل"><i class="fa-solid fa-pen"></i></button>
+                        <button class="btn-action-icon btn-delete" onclick="deleteItem('areas', '${a.id}')" title="حذف"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                </tr>
+                `;
+            }).join('');
+        }
+
+        // شاشة التنبيهات
+        function renderAlertsView() {
+            const container = document.getElementById("full-alerts-list");
+            const allAlerts = [];
+
+            LiveData.buses.forEach(b => {
+                const s = calculatePermitStatus(b.expiry);
+                if (s.status !== 'safe' && b.expiry) allAlerts.push({ element: `تصريح حافلة رقم (${b.number}) - DOT: ${b.dot || '-'}`, expiry: b.expiry, ...s });
+            });
+
+            LiveData.drivers.forEach(d => {
+                const s = calculatePermitStatus(d.expiry);
+                if (s.status !== 'safe' && d.expiry) allAlerts.push({ element: `تصريح السائق: ${d.name} (${d.permit || '-'})`, expiry: d.expiry, ...s });
+            });
+
+            LiveData.supervisors.forEach(sup => {
+                const s = calculatePermitStatus(sup.expiry);
+                if (s.status !== 'safe' && sup.expiry) allAlerts.push({ element: `تصريح المشرفة: ${sup.name} (${sup.permit || '-'})`, expiry: sup.expiry, ...s });
+            });
+
+            if (allAlerts.length === 0) {
+                container.innerHTML = `<div class="table-card" style="padding: 30px; text-align: center; color: var(--status-safe); font-weight: 700;">
+                    <i class="fa-solid fa-circle-check" style="font-size: 32px; margin-bottom: 8px;"></i>
+                    <p>جميع تصاريح الحافلات والسائقين والمشرفات سارية، أو لم يتم إدخال بيانات بعد.</p>
+                </div>`;
+            } else {
+                container.innerHTML = `
+                    <div class="table-card" style="padding: 20px;">
+                        ${allAlerts.map(a => `
+                            <div class="alert-item ${a.alertType}">
+                                <div>
+                                    <strong>${a.element}</strong>
+                                    <div style="font-size: 12px; margin-top: 3px;">تاريخ الانتهاء: ${a.expiry}</div>
+                                </div>
+                                <span class="badge ${a.badgeClass}">${a.label}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+        }
+
+        // تعبئة القوائم المنسدلة
+        function populateSelectOptions() {
+            const filterArea = document.getElementById("filter-student-area");
+            const filterBus = document.getElementById("filter-student-bus");
+            if (filterArea) filterArea.innerHTML = '<option value="">جميع المناطق</option>' + LiveData.areas.map(a => `<option value="${a.name}">${a.name}</option>`).join('');
+            if (filterBus) filterBus.innerHTML = '<option value="">جميع الحافلات</option>' + LiveData.buses.map(b => `<option value="${b.number}">حافلة ${b.number}</option>`).join('');
+
+            const studentBusSelect = document.getElementById("student-bus-select");
+            if (studentBusSelect) {
+                studentBusSelect.innerHTML = '<option value="">اختر الحافلة</option>' + LiveData.buses.map(b => `<option value="${b.number}">حافلة ${b.number} (${b.area || 'بدون منطقة'})</option>`).join('');
+            }
+
+            const busAreaSelect = document.getElementById("bus-area-select");
+            const busDriverSelect = document.getElementById("bus-driver-select");
+            const busSupSelect = document.getElementById("bus-supervisor-select");
+            if (busAreaSelect) busAreaSelect.innerHTML = '<option value="">اختر المنطقة</option>' + LiveData.areas.map(a => `<option value="${a.name}">${a.name}</option>`).join('');
+            if (busDriverSelect) busDriverSelect.innerHTML = '<option value="">اختر السائق</option>' + LiveData.drivers.map(d => `<option value="${d.name}">${d.name}</option>`).join('');
+            if (busSupSelect) busSupSelect.innerHTML = '<option value="">اختر المشرفة</option>' + LiveData.supervisors.map(s => `<option value="${s.name}">${s.name}</option>`).join('');
+
+            const driverAreaSelect = document.getElementById("driver-area-select");
+            const supAreaSelect = document.getElementById("supervisor-area-select");
+            if (driverAreaSelect) driverAreaSelect.innerHTML = '<option value="">اختر المنطقة</option>' + LiveData.areas.map(a => `<option value="${a.name}">${a.name}</option>`).join('');
+            if (supAreaSelect) supAreaSelect.innerHTML = '<option value="">اختر المنطقة</option>' + LiveData.areas.map(a => `<option value="${a.name}">${a.name}</option>`).join('');
+        }
+
+        // الربط التلقائي للطالب
+        function onStudentBusChanged(busNum) {
+            const bus = LiveData.buses.find(b => b.number === busNum);
+            if (bus) {
+                document.getElementById("student-area").value = bus.area || "";
+                document.getElementById("student-driver").value = bus.driver || "";
+                document.getElementById("student-supervisor").value = bus.supervisor || "";
+            } else {
+                document.getElementById("student-area").value = "";
+                document.getElementById("student-driver").value = "";
+                document.getElementById("student-supervisor").value = "";
+            }
+        }
+
+        // فحص الحافلة
+        function viewBusDetails(busId) {
+            const bus = LiveData.buses.find(b => b.id === busId);
+            if (!bus) return;
+
+            const studentsInBus = LiveData.students.filter(s => s.busNumber === bus.number);
+            const permit = calculatePermitStatus(bus.expiry);
+
+            document.getElementById("bus-view-title").innerText = `الحافلة رقم [ ${bus.number} ]`;
+            document.getElementById("bus-view-info").innerHTML = `
+                <div><strong>رقم DOT:</strong> ${bus.dot || '-'}</div>
+                <div><strong>رقم اللوحة:</strong> ${bus.plate || '-'}</div>
+                <div><strong>المنطقة:</strong> ${bus.area || '-'}</div>
+                <div><strong>السائق:</strong> ${bus.driver || 'غير محدد'}</div>
+                <div><strong>المشرفة:</strong> ${bus.supervisor || 'غير محدد'}</div>
+                <div><strong>السعة:</strong> ${studentsInBus.length} / ${bus.capacity || 0} طالب</div>
+                <div><strong>حالة التصريح:</strong> <span class="badge ${permit.badgeClass}">${permit.label}</span></div>
+            `;
+
+            const tbody = document.getElementById("bus-view-students-table");
+            if (studentsInBus.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color: var(--text-muted);">لا يوجد طلاب مسجلون على هذه الحافلة</td></tr>`;
+            } else {
+                tbody.innerHTML = studentsInBus.map(s => `
+                    <tr>
+                        <td><strong>${s.code || '-'}</strong></td>
+                        <td>${s.name}</td>
+                        <td>${s.area || '-'}</td>
+                        <td><span class="badge ${s.status === 'نشط' ? 'badge-safe' : 'badge-warn-30'}">${s.status || 'نشط'}</span></td>
+                    </tr>
+                `).join('');
+            }
+
+            openModal('bus-view-modal');
+        }
+
+        // ==================== عمليات الحفظ السحابي في Firestore ====================
+        async function saveStudent(e) {
+            e.preventDefault();
+            const id = document.getElementById("student-edit-id").value;
+            const data = {
+                code: document.getElementById("student-code").value.trim(),
+                name: document.getElementById("student-name").value.trim(),
+                busNumber: document.getElementById("student-bus-select").value,
+                area: document.getElementById("student-area").value.trim(),
+                driver: document.getElementById("student-driver").value,
+                supervisor: document.getElementById("student-supervisor").value,
+                status: document.getElementById("student-status").value,
+                notes: document.getElementById("student-notes").value.trim(),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            await firestoreSave('students', id, data, "تم حفظ بيانات الطالب بنجاح");
+            closeModal('student-modal');
+        }
+
+        async function saveBus(e) {
+            e.preventDefault();
+            const id = document.getElementById("bus-edit-id").value;
+            const data = {
+                number: document.getElementById("bus-number").value.trim(),
+                dot: document.getElementById("bus-dot").value.trim(),
+                plate: document.getElementById("bus-plate").value.trim(),
+                expiry: document.getElementById("bus-permit-expiry").value,
+                area: document.getElementById("bus-area-select").value,
+                capacity: parseInt(document.getElementById("bus-capacity").value) || 0,
+                driver: document.getElementById("bus-driver-select").value,
+                supervisor: document.getElementById("bus-supervisor-select").value,
+                notes: document.getElementById("bus-notes").value.trim(),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            await firestoreSave('buses', id, data, "تم حفظ بيانات الحافلة بنجاح");
+            closeModal('bus-modal');
+        }
+
+        async function saveDriver(e) {
+            e.preventDefault();
+            const id = document.getElementById("driver-edit-id").value;
+            const data = {
+                name: document.getElementById("driver-name").value.trim(),
+                permit: document.getElementById("driver-permit").value.trim(),
+                phone: document.getElementById("driver-phone").value.trim(),
+                expiry: document.getElementById("driver-permit-expiry").value,
+                area: document.getElementById("driver-area-select").value,
+                notes: document.getElementById("driver-notes").value.trim(),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            await firestoreSave('drivers', id, data, "تم حفظ بيانات السائق بنجاح");
+            closeModal('driver-modal');
+        }
+
+        async function saveSupervisor(e) {
+            e.preventDefault();
+            const id = document.getElementById("supervisor-edit-id").value;
+            const data = {
+                name: document.getElementById("supervisor-name").value.trim(),
+                permit: document.getElementById("supervisor-permit").value.trim(),
+                phone: document.getElementById("supervisor-phone").value.trim(),
+                expiry: document.getElementById("supervisor-permit-expiry").value,
+                area: document.getElementById("supervisor-area-select").value,
+                notes: document.getElementById("supervisor-notes").value.trim(),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            await firestoreSave('supervisors', id, data, "تم حفظ بيانات المشرفة بنجاح");
+            closeModal('supervisor-modal');
+        }
+
+        async function saveArea(e) {
+            e.preventDefault();
+            const id = document.getElementById("area-edit-id").value;
+            const data = {
+                name: document.getElementById("area-name").value.trim(),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            await firestoreSave('areas', id, data, "تم حفظ المنطقة بنجاح");
+            closeModal('area-modal');
+        }
+
+        async function firestoreSave(collectionName, id, data, successMsg) {
+            if (isFirebaseActive && db) {
+                try {
+                    if (id) {
+                        await db.collection(collectionName).doc(id).update(data);
+                    } else {
+                        data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+                        await db.collection(collectionName).add(data);
+                    }
+                    showToast(successMsg, "success");
+                    return;
+                } catch (e) {
+                    console.error("Firestore Save Error:", e);
+                }
+            }
+
+            // بديل محلي متزامن
+            if (id) {
+                const idx = LiveData[collectionName].findIndex(x => x.id === id);
+                if (idx !== -1) LiveData[collectionName][idx] = { ...LiveData[collectionName][idx], ...data };
+            } else {
+                data.id = "local_" + Date.now();
+                data.createdAt = new Date().toISOString();
+                LiveData[collectionName].push(data);
+            }
+            saveLocalCache();
+            refreshAllViews();
+            showToast(successMsg, "success");
+        }
+
+        async function deleteItem(collectionName, id) {
+            if (!confirm("هل أنت متأكد من رغبتك في الحذف نهائياً؟")) return;
+
+            if (isFirebaseActive && db) {
+                try {
+                    await db.collection(collectionName).doc(id).delete();
+                    showToast("تم الحذف بنجاح من قاعدة البيانات", "info");
+                    return;
+                } catch (e) {
+                    console.error("Firestore Delete Error:", e);
+                }
+            }
+
+            LiveData[collectionName] = LiveData[collectionName].filter(x => x.id !== id);
+            saveLocalCache();
+            refreshAllViews();
+            showToast("تم الحذف بنجاح", "info");
+        }
+
+        // ==================== فتح نوافذ التعديل ====================
+        function openStudentModal() {
+            document.getElementById("student-form").reset();
+            document.getElementById("student-edit-id").value = "";
+            document.getElementById("student-modal-title").innerText = "إضافة طالب";
+            openModal('student-modal');
+        }
+
+        function editStudent(id) {
+            const s = LiveData.students.find(x => x.id === id);
+            if (!s) return;
+            document.getElementById("student-edit-id").value = s.id;
+            document.getElementById("student-code").value = s.code || "";
+            document.getElementById("student-name").value = s.name;
+            document.getElementById("student-bus-select").value = s.busNumber;
+            document.getElementById("student-area").value = s.area || "";
+            document.getElementById("student-driver").value = s.driver || "";
+            document.getElementById("student-supervisor").value = s.supervisor || "";
+            document.getElementById("student-status").value = s.status || "نشط";
+            document.getElementById("student-notes").value = s.notes || "";
+            document.getElementById("student-modal-title").innerText = "تعديل طالب";
+            openModal('student-modal');
+        }
+
+        function openBusModal() {
+            document.getElementById("bus-form").reset();
+            document.getElementById("bus-edit-id").value = "";
+            document.getElementById("bus-modal-title").innerText = "إضافة حافلة";
+            openModal('bus-modal');
+        }
+
+        function editBus(id) {
+            const b = LiveData.buses.find(x => x.id === id);
+            if (!b) return;
+            document.getElementById("bus-edit-id").value = b.id;
+            document.getElementById("bus-number").value = b.number;
+            document.getElementById("bus-dot").value = b.dot || "";
+            document.getElementById("bus-plate").value = b.plate || "";
+            document.getElementById("bus-permit-expiry").value = b.expiry || "";
+            document.getElementById("bus-area-select").value = b.area || "";
+            document.getElementById("bus-capacity").value = b.capacity || "";
+            document.getElementById("bus-driver-select").value = b.driver || "";
+            document.getElementById("bus-supervisor-select").value = b.supervisor || "";
+            document.getElementById("bus-notes").value = b.notes || "";
+            document.getElementById("bus-modal-title").innerText = "تعديل حافلة";
+            openModal('bus-modal');
+        }
+
+        function openDriverModal() {
+            document.getElementById("driver-form").reset();
+            document.getElementById("driver-edit-id").value = "";
+            document.getElementById("driver-modal-title").innerText = "إضافة سائق";
+            openModal('driver-modal');
+        }
+
+        function editDriver(id) {
+            const d = LiveData.drivers.find(x => x.id === id);
+            if (!d) return;
+            document.getElementById("driver-edit-id").value = d.id;
+            document.getElementById("driver-name").value = d.name;
+            document.getElementById("driver-permit").value = d.permit || "";
+            document.getElementById("driver-phone").value = d.phone || "";
+            document.getElementById("driver-permit-expiry").value = d.expiry || "";
+            document.getElementById("driver-area-select").value = d.area || "";
+            document.getElementById("driver-notes").value = d.notes || "";
+            document.getElementById("driver-modal-title").innerText = "تعديل سائق";
+            openModal('driver-modal');
+        }
+
+        function openSupervisorModal() {
+            document.getElementById("supervisor-form").reset();
+            document.getElementById("supervisor-edit-id").value = "";
+            document.getElementById("supervisor-modal-title").innerText = "إضافة مشرفة";
+            openModal('supervisor-modal');
+        }
+
+        function editSupervisor(id) {
+            const s = LiveData.supervisors.find(x => x.id === id);
+            if (!s) return;
+            document.getElementById("supervisor-edit-id").value = s.id;
+            document.getElementById("supervisor-name").value = s.name;
+            document.getElementById("supervisor-permit").value = s.permit || "";
+            document.getElementById("supervisor-phone").value = s.phone || "";
+            document.getElementById("supervisor-permit-expiry").value = s.expiry || "";
+            document.getElementById("supervisor-area-select").value = s.area || "";
+            document.getElementById("supervisor-notes").value = s.notes || "";
+            document.getElementById("supervisor-modal-title").innerText = "تعديل مشرفة";
+            openModal('supervisor-modal');
+        }
+
+        function openAreaModal() {
+            document.getElementById("area-form").reset();
+            document.getElementById("area-edit-id").value = "";
+            document.getElementById("area-modal-title").innerText = "إضافة منطقة";
+            openModal('area-modal');
+        }
+
+        function editArea(id) {
+            const a = LiveData.areas.find(x => x.id === id);
+            if (!a) return;
+            document.getElementById("area-edit-id").value = a.id;
+            document.getElementById("area-name").value = a.name;
+            document.getElementById("area-modal-title").innerText = "تعديل منطقة";
+            openModal('area-modal');
+        }
+
+        // ==================== البحث الشامل ====================
+        function handleGlobalSearch(term) {
+            const q = term.trim().toLowerCase();
+            if (!q) return;
+
+            if (LiveData.students.some(s => (s.name || '').toLowerCase().includes(q) || (s.code || '').toLowerCase().includes(q))) {
+                navigate('students');
+                document.getElementById("filter-student-search").value = q;
+                renderStudentsTable();
+                return;
+            }
+            if (LiveData.buses.some(b => (b.number || '').toLowerCase().includes(q) || (b.dot || '').toLowerCase().includes(q) || (b.plate || '').toLowerCase().includes(q))) {
+                navigate('buses');
+                document.getElementById("filter-bus-search").value = q;
+                renderBusesTable();
+                return;
+            }
+            if (LiveData.drivers.some(d => (d.name || '').toLowerCase().includes(q) || (d.permit || '').toLowerCase().includes(q))) {
+                navigate('drivers');
+                return;
+            }
+            if (LiveData.supervisors.some(s => (s.name || '').toLowerCase().includes(q) || (s.permit || '').toLowerCase().includes(q))) {
+                navigate('supervisors');
+                return;
+            }
+            if (LiveData.areas.some(a => (a.name || '').toLowerCase().includes(q))) {
+                navigate('areas');
+                return;
+            }
+        }
+
+        // ==================== التقارير والتصدير ====================
+        function renderActiveReport() {
+            const repType = document.getElementById("report-type-select")?.value || "students";
+            const thead = document.getElementById("report-table-head");
+            const tbody = document.getElementById("report-table-body");
+            document.getElementById("print-date").innerText = `تاريخ الاستخراج: ${new Date().toLocaleDateString('ar-AE')}`;
+
+            if (repType === "students") {
+                thead.innerHTML = `<tr><th>رقم الطالب</th><th>اسم الطالب</th><th>المنطقة</th><th>الحافلة</th><th>السائق</th><th>المشرفة</th><th>الحالة</th></tr>`;
+                tbody.innerHTML = LiveData.students.length ? LiveData.students.map(s => `<tr><td>${s.code || '-'}</td><td>${s.name}</td><td>${s.area || '-'}</td><td>حافلة ${s.busNumber}</td><td>${s.driver || '-'}</td><td>${s.supervisor || '-'}</td><td>${s.status}</td></tr>`).join('') : `<tr><td colspan="7" style="text-align:center;">لا توجد بيانات</td></tr>`;
+            } else if (repType === "buses") {
+                thead.innerHTML = `<tr><th>رقم الحافلة</th><th>رقم DOT</th><th>اللوحة</th><th>المنطقة</th><th>السائق</th><th>المشرفة</th><th>السعة</th><th>انتهاء التصريح</th></tr>`;
+                tbody.innerHTML = LiveData.buses.length ? LiveData.buses.map(b => `<tr><td>حافلة ${b.number}</td><td>${b.dot || '-'}</td><td>${b.plate || '-'}</td><td>${b.area || '-'}</td><td>${b.driver || '-'}</td><td>${b.supervisor || '-'}</td><td>${b.capacity || 0}</td><td>${b.expiry || '-'}</td></tr>`).join('') : `<tr><td colspan="8" style="text-align:center;">لا توجد بيانات</td></tr>`;
+            } else if (repType === "drivers") {
+                thead.innerHTML = `<tr><th>اسم السائق</th><th>رقم التصريح</th><th>الهاتف</th><th>المنطقة</th><th>الحافلة</th><th>انتهاء التصريح</th><th>الحالة</th></tr>`;
+                tbody.innerHTML = LiveData.drivers.length ? LiveData.drivers.map(d => {
+                    const st = calculatePermitStatus(d.expiry);
+                    return `<tr><td>${d.name}</td><td>${d.permit || '-'}</td><td>${d.phone || '-'}</td><td>${d.area || '-'}</td><td>${d.busAssigned || '-'}</td><td>${d.expiry || '-'}</td><td>${st.label}</td></tr>`;
+                }).join('') : `<tr><td colspan="7" style="text-align:center;">لا توجد بيانات</td></tr>`;
+            } else if (repType === "supervisors") {
+                thead.innerHTML = `<tr><th>اسم المشرفة</th><th>رقم التصريح</th><th>الهاتف</th><th>المنطقة</th><th>الحافلة</th><th>انتهاء التصريح</th><th>الحالة</th></tr>`;
+                tbody.innerHTML = LiveData.supervisors.length ? LiveData.supervisors.map(s => {
+                    const st = calculatePermitStatus(s.expiry);
+                    return `<tr><td>${s.name}</td><td>${s.permit || '-'}</td><td>${s.phone || '-'}</td><td>${s.area || '-'}</td><td>${s.busAssigned || '-'}</td><td>${s.expiry || '-'}</td><td>${st.label}</td></tr>`;
+                }).join('') : `<tr><td colspan="7" style="text-align:center;">لا توجد بيانات</td></tr>`;
+            } else if (repType === "expiring_permits") {
+                thead.innerHTML = `<tr><th>النوع</th><th>الاسم / الرقم</th><th>رقم التصريح / DOT</th><th>تاريخ الانتهاء</th><th>الحالة</th></tr>`;
+                const list = [];
+                LiveData.buses.forEach(b => { const s = calculatePermitStatus(b.expiry); if (s.status !== 'safe' && b.expiry) list.push(`<tr><td>حافلة</td><td>حافلة ${b.number}</td><td>${b.dot || '-'}</td><td>${b.expiry}</td><td>${s.label}</td></tr>`); });
+                LiveData.drivers.forEach(d => { const s = calculatePermitStatus(d.expiry); if (s.status !== 'safe' && d.expiry) list.push(`<tr><td>سائق</td><td>${d.name}</td><td>${d.permit || '-'}</td><td>${d.expiry}</td><td>${s.label}</td></tr>`); });
+                LiveData.supervisors.forEach(sup => { const s = calculatePermitStatus(sup.expiry); if (s.status !== 'safe' && sup.expiry) list.push(`<tr><td>مشرفة</td><td>${sup.name}</td><td>${sup.permit || '-'}</td><td>${sup.expiry}</td><td>${s.label}</td></tr>`); });
+                tbody.innerHTML = list.length ? list.join('') : `<tr><td colspan="5" style="text-align:center;">لا توجد تصاريح منتهية أو قاربت على الانتهاء</td></tr>`;
+            }
+        }
+
+        function exportStudentsExcel() {
+            if (LiveData.students.length === 0) {
+                showToast("لا توجد بيانات طلاب للتصدير", "warning");
+                return;
+            }
+            const data = LiveData.students.map(s => ({
+                "رقم الطالب": s.code || '',
+                "اسم الطالب": s.name,
+                "المنطقة": s.area || '',
+                "رقم الحافلة": s.busNumber,
+                "السائق": s.driver || '',
+                "المشرفة": s.supervisor || '',
+                "حالة النقل": s.status,
+                "ملاحظات": s.notes || ''
+            }));
+            const ws = XLSX.utils.json_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "الطلاب");
+            XLSX.writeFile(wb, "طلاب_مدرسة_دار_العلوم_الخاصة.xlsx");
+            showToast("تم تصدير ملف Excel بنجاح", "success");
+        }
+
+        function exportCurrentReportExcel() {
+            const table = document.getElementById("report-table");
+            const wb = XLSX.utils.table_to_book(table, { sheet: "التقرير" });
+            XLSX.writeFile(wb, "تقرير_النقل_المدرسي_دار_العلوم.xlsx");
+            showToast("تم تصدير التقرير إلى Excel", "success");
+        }
+
+        async function saveSystemSettings() {
+            const warnDays = parseInt(document.getElementById("setting-warn-days").value) || 30;
+            if (isFirebaseActive && db) {
+                await db.collection('settings').doc('general').set({ warnDays: warnDays }, { merge: true });
+            }
+            LiveData.settings.warnDays = warnDays;
+            saveLocalCache();
+            showToast("تم حفظ الإعدادات في Firebase بنجاح", "success");
+        }
+
+        // ==================== وظائف الواجهة المساعدة ====================
+        function openModal(id) { document.getElementById(id).classList.add('active'); }
+        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+        function showToast(msg, type = "info") {
+            const container = document.getElementById("toast-container");
+            const toast = document.createElement("div");
+            toast.className = "toast";
+            
+            let icon = "fa-circle-info";
+            if (type === "success") icon = "fa-circle-check";
+            if (type === "danger") icon = "fa-circle-xmark";
+            if (type === "warning") icon = "fa-triangle-exclamation";
+
+            toast.innerHTML = `<i class="fa-solid ${icon}"></i> <span>${msg}</span>`;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = "0";
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.classList.remove('active');
+            }
+        };
+
+        // تشغيل التطبيق
+        document.addEventListener("DOMContentLoaded", () => {
+            setupLiveListeners();
+            checkAuth();
+        });
+    </script>
+</body>
+</html>
